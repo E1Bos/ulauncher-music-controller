@@ -15,20 +15,32 @@ logger = logging.getLogger(__name__)
 
 
 class Actions(Enum):
+    """Actions that can be performed"""
     PLAYPAUSE = auto()
     NEXT = auto()
     PREV = auto()
     MUTE = auto()
     SET_VOL = auto()
     JUMP = auto()
+    PLAYER_SELECT_MENU = auto()
+    SELECT_PLAYER = auto()
 
 
 class InteractionListener(EventListener):
-    keep_open_actions = [Actions.NEXT, Actions.PREV]
-
+    """Listener for user interactions"""
     def on_event(  # type: ignore
         self, event: ItemEnterEvent, extension: "PlayerMain"
     ) -> None | RenderResultListAction:
+        """
+        Handle user interactions
+        
+        Parameters:
+            event (ItemEnterEvent): The event that was triggered
+            extension (PlayerMain): The main extension class
+        
+        Returns:
+            None | RenderResultListAction: Nothing or a list of items to render
+        """
         data: dict[str, Any] = event.get_data()
         extension.logger.debug(str(data))
 
@@ -68,16 +80,7 @@ class InteractionListener(EventListener):
                 logger.error(
                     f"Could not parse volume amount: {data['amount']}: {e.with_traceback(None)}"
                 )
-
-        # elif action == Actions.JUMP:
-        #     MusicController.jump(data["pos"])
-
-        # elif action == "show_player":
-        #     return extension.render_main_page("change_player")
-        # elif action == "change_players":
-        #     player_chosen = data["player"]
-        #     playerctl.change_player(player_chosen)
-
-        # if action in self.keep_open_actions:
-        #     pass
-        # return RenderResultListAction()
+        elif action == Actions.PLAYER_SELECT_MENU:
+            return extension.render_players()
+        elif action == Actions.SELECT_PLAYER:
+            AudioController.change_player(data["player"])

@@ -11,6 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 class PlayerStatus(Enum):
+    """
+    Represents the status of the player
+    """
+
     PLAYING = "play"
     PAUSED = "pause"
     ERROR = auto()
@@ -19,7 +23,11 @@ class PlayerStatus(Enum):
 
 @dataclass
 class CurrentMedia:
-    icon: str
+    """
+    Represents the current media that is playing
+    """
+
+    thumbnail_path: str
     artist: str
     title: str
     album: str | None
@@ -27,39 +35,61 @@ class CurrentMedia:
 
 
 class AudioController:
+    """
+    Controller for audio actions
+    """
+
     media_cover_path: Path = Path("/tmp/ulauncher-music-player/media-thumbnails")
 
     @staticmethod
-    def _run_command(command: list[str], check: bool = True) -> str:
+    def __run_command(command: list[str], check: bool = True) -> str:
+        """
+        Run a command and return the output
+        """
         result = subprocess.run(command, check=check, stdout=subprocess.PIPE, text=True)
         print(result.stdout)
         return result.stdout
 
     @staticmethod
     def playpause(player: str = "playerctld") -> None:
-        AudioController._run_command(["playerctl", "--player", player, "play-pause"])
+        """Toggle play/pause"""
+        AudioController.__run_command(["playerctl", "--player", player, "play-pause"])
 
     @staticmethod
     def next(player: str = "playerctld") -> None:
-        AudioController._run_command(["playerctl", "--player", player, "next"])
+        """Skip to the next track"""
+        AudioController.__run_command(["playerctl", "--player", player, "next"])
 
     @staticmethod
     def prev(player: str = "playerctld") -> None:
-        AudioController._run_command(["playerctl", "--player", player, "previous"])
+        """Skip to the previous track"""
+        AudioController.__run_command(["playerctl", "--player", player, "previous"])
 
     @staticmethod
     def jump(pos: str, player: str = "playerctld") -> None:
-        AudioController._run_command(["playerctl", "--player", player, "position", pos])
+        """Jump to a specific position in the track"""
+        # TODO: Implement this
+        AudioController.__run_command(
+            ["playerctl", "--player", player, "position", pos]
+        )
 
     @staticmethod
     def global_volume(set_vol: int) -> None:
+        """
+        Set the global volume
+
+        Parameters:
+            set_vol (int): The volume to set
+        """
         cleaned_vol: str = str(max(0, min(set_vol, 100)))
-        AudioController._run_command(
+        AudioController.__run_command(
             ["pactl", "set-sink-volume", "@DEFAULT_SINK@", f"{cleaned_vol}%"]
         )
 
     @staticmethod
     def shuffle():
+        """Toggle shuffle"""
+        # TODO: Implement this
         # shuffle = MusicController._run_command(
         #     ["playerctl", "--player", "playerctld", "shuffle"]
         # )
@@ -68,7 +98,16 @@ class AudioController:
 
     @staticmethod
     def playing_status(player: str = "playerctld") -> PlayerStatus:
-        result = AudioController._run_command(
+        """
+        Get the playing status of the player
+
+        Parameters:
+            player (str): The player to check, defaults to "playerctld"
+
+        Returns:
+            PlayerStatus: The status of the player
+        """
+        result = AudioController.__run_command(
             ["playerctl", "--player", player, "status"], False
         )
 
@@ -84,8 +123,37 @@ class AudioController:
         return PlayerStatus.ERROR
 
     @staticmethod
+    def get_media_players() -> list[str]:
+        """
+        Returns a list of media players that are currently running
+
+        Returns:
+            list[str]: A list of media players
+        """
+        return AudioController.__run_command(["playerctl", "-l"]).splitlines()
+
+    @staticmethod
+    def change_player(player: str) -> None:
+        """
+        Pauses all players and plays the specified player
+
+        Parameters:
+            player (str): The player
+        """
+        AudioController.__run_command(["playerctl", "--all-players", "pause"])
+        AudioController.__run_command(["playerctl", "--player", player, "play"])
+        AudioController.__run_command(["playerctl", "--player", player, "pause"])
+        AudioController.__run_command(["playerctl", "--player", player, "play-pause"])
+
+    @staticmethod
     def get_current_media() -> CurrentMedia:
-        result = AudioController._run_command(
+        """
+        Get the current playing media metadata
+
+        Returns:
+            CurrentMedia: The current playing media metadata
+        """
+        result = AudioController.__run_command(
             [
                 "playerctl",
                 "metadata",
@@ -101,12 +169,26 @@ class AudioController:
         player = AudioController.__extract_regex_item("playerName", result).capitalize()
 
         return CurrentMedia(
-            icon=artUrl, artist=artist, title=title, album=album, player=player
+            thumbnail_path=artUrl, artist=artist, title=title, album=album, player=player
         )
 
     @staticmethod
-    def __extract_regex_item(item: str, result: str, ok_if_empty: bool = False) -> str:
-        match = re.search(rf"{item}:(.+)", result)
+    def __extract_regex_item(
+        item: str, search_str: str, ok_if_empty: bool = False
+    ) -> str:
+        """
+        Extract an item from a string using regex, used to extract metadata
+
+        Parameters:
+            item (str): The item to extract
+            search_str (str): The string to search
+            ok_if_empty (bool): Whether to return an empty string if the item is not found
+
+        Returns:
+            str: The extracted item string
+        """
+
+        match = re.search(rf"{item}:(.+)", search_str)
 
         if match is None:
             if ok_if_empty:
@@ -117,7 +199,16 @@ class AudioController:
         return match.group(1)
 
     @staticmethod
-    def get_media_icon(media: CurrentMedia) -> Path:
+    def get_media_thumbnail(media: CurrentMedia) -> Path:
+        """
+        Get the media thumbnail
+
+        Parameters:
+            media (CurrentMedia): The current media
+
+        Returns:
+            Path: The path to the media thumbnail
+        """
         cover_path: Path = AudioController.media_cover_path
 
         if not cover_path.exists():
@@ -131,24 +222,31 @@ class AudioController:
         if local_filename.exists():
             return local_filename
 
-        old_icons = glob.glob(f"{cover_path}/*.png")
-        if len(old_icons) > 50:
-            old_icons.sort(key=os.path.getctime)
-            for icon in old_icons[:35]:
+        old_thumbnails = glob.glob(f"{cover_path}/*.png")
+        if len(old_thumbnails) > 50:
+            old_thumbnails.sort(key=os.path.getctime)
+            for icon in old_thumbnails[:35]:
                 os.remove(icon)
 
         if not os.path.exists(local_filename):
-            icon_url: str = media.icon
+            thumbnail_url: str = media.thumbnail_path
 
-            if icon_url.startswith("file://"):
-                local_filename = Path(icon_url[7:])
-            elif icon_url.startswith("http"):
-                AudioController._download_icon(media, local_filename)
+            if thumbnail_url.startswith("file://"):
+                local_filename = Path(thumbnail_url[7:])
+            elif thumbnail_url.startswith("http"):
+                AudioController.__download_thumbnail(media, local_filename)
 
         return local_filename if local_filename.exists() else Path("images/icon.png")
 
     @staticmethod
-    def _download_icon(media: CurrentMedia, local_filename: Path) -> None:
+    def __download_thumbnail(media: CurrentMedia, local_filename: Path) -> None:
+        """
+        Download the thumbnail of the media
+        
+        Parameters:
+            media (CurrentMedia): The current media
+            local_filename (Path): The local filename to save the thumbnail
+        """
         try:
             result = subprocess.run(
                 [
@@ -159,14 +257,14 @@ class AudioController:
                     "0.3",
                     "-O",
                     str(local_filename),
-                    media.icon,
+                    media.thumbnail_path,
                 ],
                 check=True,
             )
             if result.returncode != 0:
                 os.remove(local_filename)
-                logger.error(f"Failed to download image from {media.icon}")
+                logger.error(f"Failed to download image from {media.thumbnail_path}")
         except subprocess.CalledProcessError as e:
             if local_filename.exists():
                 os.remove(local_filename)
-            logger.error(f"Failed to download image from {media.icon}: {e}")
+            logger.error(f"Failed to download image from {media.thumbnail_path}: {e}")

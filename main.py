@@ -6,7 +6,7 @@ from ulauncher.api.shared.action.HideWindowAction import HideWindowAction
 from ulauncher.api.shared.action.RenderResultListAction import RenderResultListAction
 from audio_controller import AudioController, PlayerStatus, CurrentMedia
 from event_listeners import InteractionListener, KeywordListener, Actions
-from render_generator import RenderGenerator
+from menu_builder import MenuBuilder
 from pathlib import Path
 import logging
 import time
@@ -68,14 +68,14 @@ class PlayerMain(Extension):
             return RenderResultListAction([PlayerMain.no_player_item()])
 
         if action is Actions.NEXT:
-            items.append(RenderGenerator.generate_next(theme))
+            items.append(MenuBuilder.build_next_track(theme))
             time.sleep(0.1)
         elif action is Actions.PREV:
-            items.append(RenderGenerator.generate_previous(theme))
+            items.append(MenuBuilder.build_previous_track(theme))
             time.sleep(0.1)
 
         current_media: CurrentMedia = AudioController.get_current_media()
-        icon_path: Path = AudioController.get_media_icon(current_media)
+        icon_path: Path = AudioController.get_media_thumbnail(current_media)
 
         current_media_title = f"{current_media.title}"
         album = f" | {current_media.album}" if current_media.album else ""
@@ -94,7 +94,14 @@ class PlayerMain(Extension):
         if action is Actions.NEXT or action is Actions.PREV:
             return RenderResultListAction(items)
 
-        items.extend(RenderGenerator.generate_render(theme))
+        items.extend(MenuBuilder.build_main_menu(theme))
+
+        return RenderResultListAction(items)
+
+    def render_players(self) -> RenderResultListAction:
+        theme: str = self.get_theme()
+
+        items = MenuBuilder.build_player_select(theme)
 
         return RenderResultListAction(items)
 

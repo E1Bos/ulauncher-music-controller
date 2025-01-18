@@ -13,10 +13,11 @@
 </blockquote>
 
 ## 🏆 Features
-- 🖼 Display the currently playing media thumbnail
-- ⏯ Play/pause any media
-- ⏭ Skip to next/previous track
-- 🔉 Control global volume
+- 🖼️ **Display Media Thumbnail**: View the thumbnail of the currently playing media.
+- ⏯️ **Play/Pause Media**: Easily play and pause any media player.
+- ⏭️ **Track Navigation**: Skip to the next or previous track effortlessly.
+- 🔊 **Volume Control**: Adjust the system volume directly.
+- 🎛️ **Multiple Media Players**: Manage multiple media players at once.
 
 ## 🐧 Installing
 
@@ -27,9 +28,7 @@ To install it on Ubuntu, run:
 sudo apt install playerctl
 ```
 
-
 Then, install the repo via Ulauncher $\rightarrow$ Preferences $\rightarrow$ Extensions $\rightarrow$ Add Extension
-
 ```
 https://github.com/E1Bos/ulauncher-media-controller
 ```
