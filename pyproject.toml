@@ -1,0 +1,7 @@
+[project]
+name = "ulauncher-music-controller"
+version = "0.1.0"
+description = "Control your music player from Ulauncher"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []

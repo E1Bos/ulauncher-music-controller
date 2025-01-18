@@ -1,0 +1,30 @@
+{
+  "required_api_version": "^2.0.0",
+  "name": "Music Controller",
+  "description": "Control Your Music",
+  "developer_name": "E1Bos",
+  "icon": "images/icon.png",
+  "options": {
+    "query_debounce": 0
+  },
+  "preferences": [
+    {
+      "id": "player_controller",
+      "type": "keyword",
+      "name": "Music player",
+      "description": "Extension keyword",
+      "default_value": "dm"
+    },
+    {
+      "id": "icon_theme",
+      "type": "select",
+      "name": "Icon theme",
+      "description": "Change the icon theme color",
+      "default_value": "light",
+      "options": [
+        { "value": "light", "text": "Light" },
+        { "value": "dark", "text": "Dark" }
+      ]
+    }
+  ]
+}
