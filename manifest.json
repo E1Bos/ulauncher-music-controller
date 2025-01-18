@@ -1,7 +1,7 @@
 {
   "required_api_version": "^2.0.0",
-  "name": "Music Controller",
-  "description": "Control Your Music",
+  "name": "Media Controller",
+  "description": "Control your media. Anytime, Anywhere.",
   "developer_name": "E1Bos",
   "icon": "images/icon.png",
   "options": {
@@ -9,11 +9,11 @@
   },
   "preferences": [
     {
-      "id": "player_controller",
+      "id": "media_controller",
       "type": "keyword",
-      "name": "Music player",
+      "name": "Media controller",
       "description": "Extension keyword",
-      "default_value": "dm"
+      "default_value": "m"
     },
     {
       "id": "icon_theme",
