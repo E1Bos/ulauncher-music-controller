@@ -2,8 +2,9 @@ from ulauncher.api.client.Extension import Extension
 from ulauncher.api.shared.event import KeywordQueryEvent, ItemEnterEvent
 from ulauncher.api.shared.item.ExtensionResultItem import ExtensionResultItem
 from ulauncher.api.shared.action.DoNothingAction import DoNothingAction
+from ulauncher.api.shared.action.HideWindowAction import HideWindowAction
 from ulauncher.api.shared.action.RenderResultListAction import RenderResultListAction
-from music_controller import MusicController, PlayerStatus, CurrentSong
+from audio_controller import AudioController, PlayerStatus, CurrentMedia
 from event_listeners import InteractionListener, KeywordListener, Actions
 from render_generator import RenderGenerator
 from pathlib import Path
@@ -20,10 +21,10 @@ class PlayerMain(Extension):
         self.subscribe(ItemEnterEvent, InteractionListener())
 
     @staticmethod
-    def error_item() -> ExtensionResultItem:
+    def no_media_item() -> ExtensionResultItem:
         return ExtensionResultItem(
             icon="images/icon.png",
-            name="Could not fetch current song",
+            name="Could not fetch current media",
             description="Is playerctl installed?",
             on_enter=DoNothingAction(),
         )
@@ -32,22 +33,36 @@ class PlayerMain(Extension):
     def no_player_item() -> ExtensionResultItem:
         return ExtensionResultItem(
             icon="images/icon.png",
-            name="No Song Playing",
+            name="No Media Playing",
             description="Please start a music player",
             on_enter=DoNothingAction(),
+        )
+
+    def render_error(self, title: str, message: str) -> RenderResultListAction:
+        theme: str = self.get_theme()
+        return RenderResultListAction(
+            [
+                ExtensionResultItem(
+                    icon=f"images/{theme}_error.png",
+                    name=f"Error: {title}",
+                    description=message,
+                    on_enter=HideWindowAction(),
+                )
+            ]
         )
 
     def get_theme(self) -> str:
         return str(self.preferences["icon_theme"]).lower()
 
     def render_main_page(self, action: Actions | None = None) -> RenderResultListAction:
-        items: list[ExtensionResultItem] = []
+        logger.info(f"Current directory: {Path.cwd()}")
         theme: str = self.get_theme()
+        items: list[ExtensionResultItem] = []
 
-        current_status: PlayerStatus = MusicController.playing_status()
+        current_status: PlayerStatus = AudioController.playing_status()
 
         if current_status == PlayerStatus.ERROR:
-            return RenderResultListAction([PlayerMain.error_item()])
+            return RenderResultListAction([PlayerMain.no_media_item()])
 
         if current_status == PlayerStatus.NO_PLAYER:
             return RenderResultListAction([PlayerMain.no_player_item()])
@@ -59,16 +74,19 @@ class PlayerMain(Extension):
             items.append(RenderGenerator.generate_previous(theme))
             time.sleep(0.1)
 
-        current_song: CurrentSong = MusicController.get_current_song()
-        icon_path: Path = MusicController.download_song_icon(current_song)
+        current_media: CurrentMedia = AudioController.get_current_media()
+        icon_path: Path = AudioController.get_media_icon(current_media)
 
-        current_song_title = f"{current_song.title}"
-        current_song_desc = f"By {current_song.artist} | {current_song.album}"
+        current_media_title = f"{current_media.title}"
+        album = f" | {current_media.album}" if current_media.album else ""
+        current_media_desc = (
+            f"By {current_media.artist}{album} | {current_media.player}"
+        )
         items.append(
             ExtensionResultItem(
                 icon=str(icon_path),
-                name=current_song_title,
-                description=current_song_desc,
+                name=current_media_title,
+                description=current_media_desc,
                 on_enter=DoNothingAction(),
             )
         )

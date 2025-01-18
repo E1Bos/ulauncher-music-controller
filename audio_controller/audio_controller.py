@@ -18,16 +18,16 @@ class PlayerStatus(Enum):
 
 
 @dataclass
-class CurrentSong:
+class CurrentMedia:
     icon: str
     artist: str
     title: str
-    album: str
+    album: str | None
     player: str
 
 
-class MusicController:
-    song_cover_path: Path = Path("images/song-covers")
+class AudioController:
+    media_cover_path: Path = Path("/tmp/ulauncher-music-player/media-thumbnails")
 
     @staticmethod
     def _run_command(command: list[str], check: bool = True) -> str:
@@ -37,24 +37,24 @@ class MusicController:
 
     @staticmethod
     def playpause(player: str = "playerctld") -> None:
-        MusicController._run_command(["playerctl", "--player", player, "play-pause"])
+        AudioController._run_command(["playerctl", "--player", player, "play-pause"])
 
     @staticmethod
     def next(player: str = "playerctld") -> None:
-        MusicController._run_command(["playerctl", "--player", player, "next"])
+        AudioController._run_command(["playerctl", "--player", player, "next"])
 
     @staticmethod
     def prev(player: str = "playerctld") -> None:
-        MusicController._run_command(["playerctl", "--player", player, "previous"])
+        AudioController._run_command(["playerctl", "--player", player, "previous"])
 
     @staticmethod
     def jump(pos: str, player: str = "playerctld") -> None:
-        MusicController._run_command(["playerctl", "--player", player, "position", pos])
+        AudioController._run_command(["playerctl", "--player", player, "position", pos])
 
     @staticmethod
     def global_volume(set_vol: int) -> None:
         cleaned_vol: str = str(max(0, min(set_vol, 100)))
-        MusicController._run_command(
+        AudioController._run_command(
             ["pactl", "set-sink-volume", "@DEFAULT_SINK@", f"{cleaned_vol}%"]
         )
 
@@ -68,7 +68,7 @@ class MusicController:
 
     @staticmethod
     def playing_status(player: str = "playerctld") -> PlayerStatus:
-        result = MusicController._run_command(
+        result = AudioController._run_command(
             ["playerctl", "--player", player, "status"], False
         )
 
@@ -84,47 +84,48 @@ class MusicController:
         return PlayerStatus.ERROR
 
     @staticmethod
-    def get_current_song(player: str = "playerctld") -> CurrentSong:
-        result = MusicController._run_command(
+    def get_current_media() -> CurrentMedia:
+        result = AudioController._run_command(
             [
                 "playerctl",
-                "--player",
-                player,
                 "metadata",
                 "--format",
                 "artUrl:{{mpris:artUrl}}\nartist:{{xesam:artist}}\ntitle:{{xesam:title}}\nalbum:{{xesam:album}}\nplayerName:{{playerName}}",
             ]
         )
 
-        artUrl = MusicController.__extract_regex_item("artUrl", result)
-        artist = MusicController.__extract_regex_item("artist", result)
-        title = MusicController.__extract_regex_item("title", result)
-        album = MusicController.__extract_regex_item("album", result)
-        player = MusicController.__extract_regex_item("playerName", result)
+        artUrl = AudioController.__extract_regex_item("artUrl", result)
+        artist = AudioController.__extract_regex_item("artist", result)
+        title = AudioController.__extract_regex_item("title", result)
+        album = AudioController.__extract_regex_item("album", result, ok_if_empty=True)
+        player = AudioController.__extract_regex_item("playerName", result).capitalize()
 
-        return CurrentSong(
+        return CurrentMedia(
             icon=artUrl, artist=artist, title=title, album=album, player=player
         )
 
     @staticmethod
-    def __extract_regex_item(item: str, result: str) -> str:
+    def __extract_regex_item(item: str, result: str, ok_if_empty: bool = False) -> str:
         match = re.search(rf"{item}:(.+)", result)
 
         if match is None:
+            if ok_if_empty:
+                return ""
+
             raise ValueError(f"Could not find {item} in result")
 
         return match.group(1)
 
     @staticmethod
-    def download_song_icon(song: CurrentSong) -> Path:
-        cover_path: Path = MusicController.song_cover_path
+    def get_media_icon(media: CurrentMedia) -> Path:
+        cover_path: Path = AudioController.media_cover_path
 
         if not cover_path.exists():
             cover_path.mkdir(parents=True, exist_ok=True)
 
         local_filename = Path(
             cover_path,
-            f"{'-'.join(song.title.split())}-{'-'.join(song.artist.split())}.png",
+            f"{'-'.join(media.title.split())}-{'-'.join(media.artist.split())}.png",
         )
 
         if local_filename.exists():
@@ -137,26 +138,35 @@ class MusicController:
                 os.remove(icon)
 
         if not os.path.exists(local_filename):
-            try:
-                result = subprocess.run(
-                    [
-                        "wget",
-                        "-t",
-                        "1",
-                        "-T",
-                        "0.3",
-                        "-O",
-                        str(local_filename),
-                        song.icon,
-                    ],
-                    check=True,
-                )
-                if result.returncode != 0:
-                    os.remove(local_filename)
-                    logger.error(f"Failed to download image from {song.icon}")
-            except subprocess.CalledProcessError as e:
-                if local_filename.exists():
-                    os.remove(local_filename)
-                logger.error(f"Failed to download image from {song.icon}: {e}")
+            icon_url: str = media.icon
+
+            if icon_url.startswith("file://"):
+                local_filename = Path(icon_url[7:])
+            elif icon_url.startswith("http"):
+                AudioController._download_icon(media, local_filename)
 
         return local_filename if local_filename.exists() else Path("images/icon.png")
+
+    @staticmethod
+    def _download_icon(media: CurrentMedia, local_filename: Path) -> None:
+        try:
+            result = subprocess.run(
+                [
+                    "wget",
+                    "-t",
+                    "1",
+                    "-T",
+                    "0.3",
+                    "-O",
+                    str(local_filename),
+                    media.icon,
+                ],
+                check=True,
+            )
+            if result.returncode != 0:
+                os.remove(local_filename)
+                logger.error(f"Failed to download image from {media.icon}")
+        except subprocess.CalledProcessError as e:
+            if local_filename.exists():
+                os.remove(local_filename)
+            logger.error(f"Failed to download image from {media.icon}: {e}")

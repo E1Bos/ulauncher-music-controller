@@ -1,7 +1,7 @@
 from ulauncher.api.shared.item.ExtensionResultItem import ExtensionResultItem
 from ulauncher.api.shared.action.ExtensionCustomAction import ExtensionCustomAction
 from ulauncher.api.shared.event import KeywordQueryEvent
-from music_controller import MusicController, PlayerStatus
+from audio_controller import AudioController, PlayerStatus
 from event_listeners import Actions
 
 
@@ -10,8 +10,8 @@ class RenderGenerator:
     def generate_next(theme: str) -> ExtensionResultItem:
         return ExtensionResultItem(
             icon=f"images/{theme}_next.png",
-            name="Next Song",
-            description="Go to the next song",
+            name="Next Track",
+            description="Go to the next song/track",
             on_enter=ExtensionCustomAction(
                 {"action": Actions.NEXT}, keep_app_open=True
             ),
@@ -21,8 +21,8 @@ class RenderGenerator:
     def generate_previous(theme: str) -> ExtensionResultItem:
         return ExtensionResultItem(
             icon=f"images/{theme}_prev.png",
-            name="Previous Song",
-            description="Go to the previous song",
+            name="Previous Track",
+            description="Go to the previous song/track",
             on_enter=ExtensionCustomAction(
                 {"action": Actions.PREV}, keep_app_open=True
             ),
@@ -36,7 +36,7 @@ class RenderGenerator:
 
         opposite_status: str = (
             PlayerStatus.PAUSED.value
-            if MusicController.playing_status() == PlayerStatus.PLAYING
+            if AudioController.playing_status() == PlayerStatus.PLAYING
             else PlayerStatus.PLAYING.value
         )
 

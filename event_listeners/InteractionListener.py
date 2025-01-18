@@ -1,9 +1,10 @@
 from enum import Enum, auto
 import logging
+from subprocess import CalledProcessError
 from ulauncher.api.client.EventListener import EventListener
 from ulauncher.api.shared.event import ItemEnterEvent
 from ulauncher.api.shared.action.RenderResultListAction import RenderResultListAction
-from music_controller import MusicController
+from audio_controller import AudioController
 
 from typing import TYPE_CHECKING, Any
 
@@ -34,15 +35,21 @@ class InteractionListener(EventListener):
         action = data["action"]
 
         if action == Actions.PLAYPAUSE:
-            MusicController.playpause()
-        elif action == Actions.NEXT:
-            MusicController.next()
-            return extension.render_main_page(Actions.NEXT)
-        elif action == Actions.PREV:
-            MusicController.prev()
-            return extension.render_main_page(Actions.PREV)
+            AudioController.playpause()
+        elif action in [Actions.NEXT, Actions.PREV]:
+            try:
+                if action == Actions.NEXT:
+                    AudioController.next()
+                else:
+                    AudioController.prev()
+                return extension.render_main_page(action)
+            except CalledProcessError:
+                return extension.render_error(
+                    f"Could not play {'next' if action == Actions.NEXT else 'previous'} media",
+                    "Does the player support this action?",
+                )
         elif action == Actions.MUTE:
-            MusicController.global_volume(0)
+            AudioController.global_volume(0)
         elif action == Actions.SET_VOL:
             try:
                 query_split: list[str] = data["amount"].split()
@@ -56,11 +63,12 @@ class InteractionListener(EventListener):
                     raise ValueError(f"{query_split[1]} is not a number")
 
                 amount: int = int(amount_str)
-                MusicController.global_volume(amount)
+                AudioController.global_volume(amount)
             except (TypeError, ValueError) as e:
                 logger.error(
                     f"Could not parse volume amount: {data['amount']}: {e.with_traceback(None)}"
                 )
+
         # elif action == Actions.JUMP:
         #     MusicController.jump(data["pos"])
 
