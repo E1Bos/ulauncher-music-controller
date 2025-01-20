@@ -3,7 +3,7 @@
 </h1>
 <blockquote align="center">
     <h3>
-    Control your media. Anytime, Anywhere.
+    Control your media. Anytime, anywhere.
     </h3>
     <p align="left">
         This project took heavy inspiration from 
