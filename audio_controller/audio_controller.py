@@ -68,7 +68,7 @@ class CurrentMedia:
 class AudioController:
     """Controller for audio actions"""
 
-    media_cover_path: Path = Path("/tmp/ulauncher-music-player/media-thumbnails")
+    media_cover_path: Path = Path("/tmp/ulauncher-media-player/media-thumbnails")
 
     @staticmethod
     def __run_command(command: list[str], check: bool = True) -> str:
