@@ -10,10 +10,8 @@ import re
 logger = logging.getLogger(__name__)
 
 
-class PlayerStatus(Enum):
-    """
-    Represents the status of the player
-    """
+class MediaPlaybackState(Enum):
+    """Represents the status of the player"""
 
     PLAYING = "play"
     PAUSED = "pause"
@@ -21,23 +19,54 @@ class PlayerStatus(Enum):
     NO_PLAYER = auto()
 
 
+class ShuffleState(Enum):
+    """Represents the shuffle status of the player"""
+
+    ON = "On"
+    OFF = "Off"
+    UNAVAILABLE = auto()
+
+
+class RepeatState(Enum):
+    """Represents the loop of the player"""
+
+    OFF = "None"
+    PLAYLIST = "Playlist"
+    TRACK = "Track"
+    UNAVAILABLE = "Unavailable"
+
+    def next(self) -> "RepeatState":
+        order = [RepeatState.OFF, RepeatState.PLAYLIST, RepeatState.TRACK]
+
+        if self == RepeatState.UNAVAILABLE:
+            return RepeatState.UNAVAILABLE
+
+        return order[(order.index(self) + 1) % len(order)]
+
+
+@dataclass
+class PlayerStatus:
+    """Represents the status of the player"""
+
+    playback_state: MediaPlaybackState
+    shuffle_state: ShuffleState
+    repeat_state: RepeatState
+
+
 @dataclass
 class CurrentMedia:
-    """
-    Represents the current media that is playing
-    """
+    """Represents the current media that is playing"""
 
     thumbnail_path: str
     artist: str
     title: str
-    album: str | None
     player: str
+    album: str | None
+    position: int | None
 
 
 class AudioController:
-    """
-    Controller for audio actions
-    """
+    """Controller for audio actions"""
 
     media_cover_path: Path = Path("/tmp/ulauncher-music-player/media-thumbnails")
 
@@ -46,31 +75,37 @@ class AudioController:
         """
         Run a command and return the output
         """
-        result = subprocess.run(command, check=check, stdout=subprocess.PIPE, text=True)
-        print(result.stdout)
+        result = subprocess.run(
+            command,
+            check=check,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        logger.debug(result.stdout)
         return result.stdout
 
     @staticmethod
-    def playpause(player: str = "playerctld") -> None:
+    def playpause() -> None:
         """Toggle play/pause"""
-        AudioController.__run_command(["playerctl", "--player", player, "play-pause"])
+        AudioController.__run_command(["playerctl", "-p", "playerctld", "play-pause"])
 
     @staticmethod
-    def next(player: str = "playerctld") -> None:
+    def next() -> None:
         """Skip to the next track"""
-        AudioController.__run_command(["playerctl", "--player", player, "next"])
+        AudioController.__run_command(["playerctl", "-p", "playerctld", "next"])
 
     @staticmethod
-    def prev(player: str = "playerctld") -> None:
+    def prev() -> None:
         """Skip to the previous track"""
-        AudioController.__run_command(["playerctl", "--player", player, "previous"])
+        AudioController.__run_command(["playerctl", "-p", "playerctld", "previous"])
 
     @staticmethod
-    def jump(pos: str, player: str = "playerctld") -> None:
+    def jump(pos: str) -> None:
         """Jump to a specific position in the track"""
         # TODO: Implement this
         AudioController.__run_command(
-            ["playerctl", "--player", player, "position", pos]
+            ["playerctl", "-p", "playerctld", "position", pos]
         )
 
     @staticmethod
@@ -87,17 +122,21 @@ class AudioController:
         )
 
     @staticmethod
-    def shuffle():
+    def shuffle() -> None:
         """Toggle shuffle"""
-        # TODO: Implement this
-        # shuffle = MusicController._run_command(
-        #     ["playerctl", "--player", "playerctld", "shuffle"]
-        # )
-        pass
-        # MusicController._run_command(["playerctl", "--player", "playerctld", "shuffle"])
+        AudioController.__run_command(
+            ["playerctl", "-p", "playerctld", "shuffle", "toggle"]
+        )
 
     @staticmethod
-    def playing_status(player: str = "playerctld") -> PlayerStatus:
+    def repeat(player_status: PlayerStatus) -> None:
+        next_state = player_status.repeat_state.next()
+        AudioController.__run_command(
+            ["playerctl", "-p", "playerctld", "loop", next_state.value]
+        )
+
+    @staticmethod
+    def get_player_status() -> PlayerStatus:
         """
         Get the playing status of the player
 
@@ -107,20 +146,25 @@ class AudioController:
         Returns:
             PlayerStatus: The status of the player
         """
-        result = AudioController.__run_command(
-            ["playerctl", "--player", player, "status"], False
+        player_status = AudioController.__run_command(
+            ["playerctl", "-p", "playerctld", "status"], False
+        )
+        shuffle_status = AudioController.__run_command(
+            ["playerctl", "-p", "playerctld", "shuffle"], False
+        )
+        loop_status = AudioController.__run_command(
+            ["playerctl", "-p", "playerctld", "loop"], False
         )
 
-        if "No player found" in result:
-            return PlayerStatus.NO_PLAYER
+        media_state: MediaPlaybackState = Parser.parse_media_state(player_status)
+        shuffle_state: ShuffleState = Parser.parse_shuffle_state(shuffle_status)
+        loop_state: RepeatState = Parser.parse_loop_state(loop_status)
 
-        if "Playing" in result:
-            return PlayerStatus.PLAYING
-
-        if "Paused" in result:
-            return PlayerStatus.PAUSED
-
-        return PlayerStatus.ERROR
+        return PlayerStatus(
+            playback_state=media_state,
+            shuffle_state=shuffle_state,
+            repeat_state=loop_state,
+        )
 
     @staticmethod
     def get_media_players() -> list[str]:
@@ -141,9 +185,9 @@ class AudioController:
             player (str): The player
         """
         AudioController.__run_command(["playerctl", "--all-players", "pause"])
-        AudioController.__run_command(["playerctl", "--player", player, "play"])
-        AudioController.__run_command(["playerctl", "--player", player, "pause"])
-        AudioController.__run_command(["playerctl", "--player", player, "play-pause"])
+        AudioController.__run_command(["playerctl", "-p", player, "play"])
+        AudioController.__run_command(["playerctl", "-p", player, "pause"])
+        AudioController.__run_command(["playerctl", "-p", player, "play-pause"])
 
     @staticmethod
     def get_current_media() -> CurrentMedia:
@@ -158,45 +202,25 @@ class AudioController:
                 "playerctl",
                 "metadata",
                 "--format",
-                "artUrl:{{mpris:artUrl}}\nartist:{{xesam:artist}}\ntitle:{{xesam:title}}\nalbum:{{xesam:album}}\nplayerName:{{playerName}}",
+                "artUrl:{{mpris:artUrl}}\nartist:{{xesam:artist}}\ntitle:{{xesam:title}}\nalbum:{{xesam:album}}\nplayerName:{{playerName}}\nposition:{{position}}",
             ]
         )
 
-        artUrl = AudioController.__extract_regex_item("artUrl", result)
-        artist = AudioController.__extract_regex_item("artist", result)
-        title = AudioController.__extract_regex_item("title", result)
-        album = AudioController.__extract_regex_item("album", result, ok_if_empty=True)
-        player = AudioController.__extract_regex_item("playerName", result).capitalize()
+        artUrl = Parser.extract_regex_item("artUrl", result)
+        artist = Parser.extract_regex_item("artist", result)
+        title = Parser.extract_regex_item("title", result)
+        player = Parser.extract_regex_item("playerName", result).capitalize()
+        album = Parser.extract_regex_item("album", result, ok_if_empty=True)
+        position = Parser.extract_regex_item("position", result, ok_if_empty=True)
 
         return CurrentMedia(
-            thumbnail_path=artUrl, artist=artist, title=title, album=album, player=player
+            thumbnail_path=artUrl,
+            artist=artist,
+            title=title,
+            player=player,
+            album=album,
+            position=int(position) if position else None,
         )
-
-    @staticmethod
-    def __extract_regex_item(
-        item: str, search_str: str, ok_if_empty: bool = False
-    ) -> str:
-        """
-        Extract an item from a string using regex, used to extract metadata
-
-        Parameters:
-            item (str): The item to extract
-            search_str (str): The string to search
-            ok_if_empty (bool): Whether to return an empty string if the item is not found
-
-        Returns:
-            str: The extracted item string
-        """
-
-        match = re.search(rf"{item}:(.+)", search_str)
-
-        if match is None:
-            if ok_if_empty:
-                return ""
-
-            raise ValueError(f"Could not find {item} in result")
-
-        return match.group(1)
 
     @staticmethod
     def get_media_thumbnail(media: CurrentMedia) -> Path:
@@ -242,7 +266,7 @@ class AudioController:
     def __download_thumbnail(media: CurrentMedia, local_filename: Path) -> None:
         """
         Download the thumbnail of the media
-        
+
         Parameters:
             media (CurrentMedia): The current media
             local_filename (Path): The local filename to save the thumbnail
@@ -254,7 +278,7 @@ class AudioController:
                     "-t",
                     "1",
                     "-T",
-                    "0.3",
+                    "0.2",
                     "-O",
                     str(local_filename),
                     media.thumbnail_path,
@@ -268,3 +292,67 @@ class AudioController:
             if local_filename.exists():
                 os.remove(local_filename)
             logger.error(f"Failed to download image from {media.thumbnail_path}: {e}")
+
+
+class Parser:
+    @staticmethod
+    def parse_media_state(player_status: str) -> MediaPlaybackState:
+        if "No players found" in player_status:
+            return MediaPlaybackState.NO_PLAYER
+
+        if "Playing" in player_status:
+            return MediaPlaybackState.PLAYING
+
+        if "Paused" in player_status:
+            return MediaPlaybackState.PAUSED
+
+        return MediaPlaybackState.ERROR
+
+    @staticmethod
+    def parse_shuffle_state(shuffle_status: str) -> ShuffleState:
+        if "On" in shuffle_status:
+            return ShuffleState.ON
+
+        if "Off" in shuffle_status:
+            return ShuffleState.OFF
+
+        return ShuffleState.UNAVAILABLE
+
+    @staticmethod
+    def parse_loop_state(loop_status: str) -> RepeatState:
+        if "Track" in loop_status:
+            return RepeatState.TRACK
+
+        if "Playlist" in loop_status:
+            return RepeatState.PLAYLIST
+
+        if "None" in loop_status:
+            return RepeatState.OFF
+
+        return RepeatState.UNAVAILABLE
+
+    @staticmethod
+    def extract_regex_item(
+        item: str, search_str: str, ok_if_empty: bool = False
+    ) -> str:
+        """
+        Extract an item from a string using regex, used to extract metadata
+
+        Parameters:
+            item (str): The item to extract
+            search_str (str): The string to search
+            ok_if_empty (bool): Whether to return an empty string if the item is not found
+
+        Returns:
+            str: The extracted item string
+        """
+
+        match = re.search(rf"{item}:(.+)", search_str)
+
+        if match is None:
+            if ok_if_empty:
+                return ""
+
+            raise ValueError(f"Could not find {item} in result")
+
+        return match.group(1)
