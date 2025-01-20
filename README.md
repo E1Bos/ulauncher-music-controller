@@ -1,6 +1,10 @@
-<h1 align="center">
-    Media Controller for Ulauncher
+<h1 align="center" style="display: flex; align-items: center; justify-content: center;">
+  <img src="images/icon.png" width="50" style="margin-right: 10px;">
+  | Media Controller for Ulauncher
 </h1>
+
+
+
 <blockquote align="center">
     <h3>
     Control your media. Anytime, anywhere.

@@ -252,7 +252,7 @@ class MenuBuilder:
         """
         icon_folder: str = f"{MenuBuilder.get_icon_folder(theme)}"
         return ExtensionResultItem(
-            icon=f"{icon_folder}/logo.svg",
+            icon=f"{icon_folder}/icon.png",
             name="Could not fetch current media",
             description="Is playerctl installed?",
             on_enter=DoNothingAction(),
@@ -271,7 +271,7 @@ class MenuBuilder:
         """
         icon_folder: str = f"{MenuBuilder.get_icon_folder(theme)}"
         return ExtensionResultItem(
-            icon=f"{icon_folder}/logo.svg",
+            icon=f"{icon_folder}/icon.png",
             name="No Media Playing",
             description="Please start a music player",
             on_enter=HideWindowAction(),
