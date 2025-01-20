@@ -87,6 +87,7 @@ class MenuBuilder:
     def build_shuffle(
         theme: str, player_status: PlayerStatus
     ) -> ExtensionResultItem | None:
+        """Build the shuffle item"""
         icon_folder: str = f"{MenuBuilder.get_icon_folder(theme)}"
 
         if player_status.shuffle_state == ShuffleState.UNAVAILABLE:
@@ -98,11 +99,11 @@ class MenuBuilder:
             #     on_enter=DoNothingAction(),
             # )
 
-        shuffle_str: str = player_status.shuffle_state.name.capitalize()
+        shuffle_str: str = player_status.shuffle_state.name.lower()
         shuffle_opp: str = "off" if shuffle_str == "On" else "on"
         return ExtensionResultItem(
-            icon=f"{icon_folder}/shuffle.svg",
-            name=f"Shuffle: {shuffle_str}",
+            icon=f"{icon_folder}/shuffle_{shuffle_str}.svg",
+            name=f"Shuffle {shuffle_str}",
             description=f"Turn shuffle {shuffle_opp}",
             on_enter=ExtensionCustomAction({"action": Actions.SHUFFLE}),
         )
