@@ -12,6 +12,18 @@
     </p>
 </blockquote>
 
+
+<table>
+  <tr>
+    <td><img src="screenshots/song-light.png" width="auto" height="auto"></td>
+    <td><img src="screenshots/song-dark.png" width="auto" height="auto"></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/web-light.png" width="auto" height="auto"></td>
+    <td><img src="screenshots/player-select.png" width="auto" height="auto"></td>
+</table>
+
+
 ## 🏆 Features
 - 🖼️ **Display Media Thumbnail**: View the thumbnail of the currently playing media.
 - ⏯️ **Play/Pause Media**: Easily play and pause any media player.
