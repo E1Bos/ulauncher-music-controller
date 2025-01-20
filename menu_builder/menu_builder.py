@@ -213,7 +213,7 @@ class MenuBuilder:
         return items
 
     @staticmethod
-    def build_player_select(theme) -> list[ExtensionResultItem]:
+    def build_player_select(theme: str) -> list[ExtensionResultItem]:
         """
         Build the player select menu
 
@@ -240,30 +240,38 @@ class MenuBuilder:
         return players
 
     @staticmethod
-    def no_media_item() -> ExtensionResultItem:
+    def no_media_item(theme: str) -> ExtensionResultItem:
         """
         Build the no media item
+
+        Parameters:
+            theme (str): The current theme
 
         Returns:
             ExtensionResultItem: The no media item
         """
+        icon_folder: str = f"{MenuBuilder.get_icon_folder(theme)}"
         return ExtensionResultItem(
-            icon="images/icon.png",
+            icon=f"{icon_folder}/logo.svg",
             name="Could not fetch current media",
             description="Is playerctl installed?",
             on_enter=DoNothingAction(),
         )
 
     @staticmethod
-    def no_player_item() -> ExtensionResultItem:
+    def no_player_item(theme: str) -> ExtensionResultItem:
         """
         Build the no player item
+
+        Parameters:
+            theme (str): The current theme
 
         Returns:
             ExtensionResultItem: The no player item
         """
+        icon_folder: str = f"{MenuBuilder.get_icon_folder(theme)}"
         return ExtensionResultItem(
-            icon="images/icon.png",
+            icon=f"{icon_folder}/logo.svg",
             name="No Media Playing",
             description="Please start a music player",
             on_enter=HideWindowAction(),

@@ -44,10 +44,10 @@ class PlayerMain(Extension):
         logger.debug(f"Current status: {player_status}")
 
         if playback_state == MediaPlaybackState.ERROR:
-            return RenderResultListAction([MenuBuilder.no_media_item()])
+            return RenderResultListAction([MenuBuilder.no_media_item(theme)])
 
         if playback_state == MediaPlaybackState.NO_PLAYER:
-            return RenderResultListAction([MenuBuilder.no_player_item()])
+            return RenderResultListAction([MenuBuilder.no_player_item(theme)])
 
         if action is Actions.NEXT:
             items.append(MenuBuilder.build_next_track(theme))
