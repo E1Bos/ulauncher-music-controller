@@ -30,7 +30,7 @@ class PlayerMain(Extension):
 
     def render_error(self, title: str, message: str) -> RenderResultListAction:
         return RenderResultListAction(
-            MenuBuilder.build_error(self.get_theme(), title, message)
+            [MenuBuilder.build_error(self.get_theme(), title, message)]
         )
 
     def render_main_page(self, action: Actions | None = None) -> RenderResultListAction:
