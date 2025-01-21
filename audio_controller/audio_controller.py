@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-from enum import Enum, auto
 import glob
 import os
 from pathlib import Path
@@ -7,62 +5,15 @@ import subprocess
 import logging
 import re
 
+from data_classes import (
+    CurrentMedia,
+    MediaPlaybackState,
+    PlayerStatus,
+    RepeatState,
+    ShuffleState,
+)
+
 logger = logging.getLogger(__name__)
-
-
-class MediaPlaybackState(Enum):
-    """Represents the status of the player"""
-
-    PLAYING = "play"
-    PAUSED = "pause"
-    ERROR = auto()
-    NO_PLAYER = auto()
-
-
-class ShuffleState(Enum):
-    """Represents the shuffle status of the player"""
-
-    ON = "On"
-    OFF = "Off"
-    UNAVAILABLE = auto()
-
-
-class RepeatState(Enum):
-    """Represents the loop of the player"""
-
-    OFF = "None"
-    PLAYLIST = "Playlist"
-    TRACK = "Track"
-    UNAVAILABLE = "Unavailable"
-
-    def next(self) -> "RepeatState":
-        order = [RepeatState.OFF, RepeatState.PLAYLIST, RepeatState.TRACK]
-
-        if self == RepeatState.UNAVAILABLE:
-            return RepeatState.UNAVAILABLE
-
-        return order[(order.index(self) + 1) % len(order)]
-
-
-@dataclass
-class PlayerStatus:
-    """Represents the status of the player"""
-
-    playback_state: MediaPlaybackState
-    shuffle_state: ShuffleState
-    repeat_state: RepeatState
-
-
-@dataclass
-class CurrentMedia:
-    """Represents the current media that is playing"""
-
-    thumbnail_path: str
-    artist: str
-    title: str
-    player: str
-    album: str | None
-    position: int | None
 
 
 class AudioController:
@@ -146,9 +97,7 @@ class AudioController:
         Returns:
             PlayerStatus: The status of the player
         """
-        player_status = AudioController.__run_command(
-            ["playerctl", "status"], False
-        )
+        player_status = AudioController.__run_command(["playerctl", "status"], False)
         shuffle_status = AudioController.__run_command(
             ["playerctl", "-p", "playerctld", "shuffle"], False
         )

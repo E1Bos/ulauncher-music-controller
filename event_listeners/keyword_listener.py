@@ -3,7 +3,9 @@ from ulauncher.api.client.EventListener import EventListener
 from ulauncher.api.shared.event import KeywordQueryEvent
 from ulauncher.api.shared.action.RenderResultListAction import RenderResultListAction
 from ulauncher.api.shared.item.ExtensionResultItem import ExtensionResultItem
+from audio_controller import AudioController
 from menu_builder import MenuBuilder
+from data_classes import Query, MediaPlaybackState, PlayerStatus
 
 from typing import TYPE_CHECKING
 
@@ -31,19 +33,29 @@ class KeywordListener(EventListener):
         """
         theme: str = extension.get_theme()
         arguments: None | str = event.get_argument()
+        
+        player_status: PlayerStatus = AudioController.get_player_status()
+        playback_state: MediaPlaybackState = player_status.playback_state
 
-        if arguments is None:
-            return extension.render_main_page()
+        if arguments is None or playback_state == MediaPlaybackState.ERROR:
+            return extension.render_main_page(player_status=player_status)
 
         command, *components = arguments.split()
         aliases = extension.get_aliases()
 
-        if command in aliases:
-            command = aliases[command]
+        alpha_command: str = "".join(filter(str.isalpha, command.lower()))
+        if alpha_command in aliases:
+            decimal_command: str = "".join(filter(str.isdecimal, command))
+            if decimal_command:
+                components.append(decimal_command)
+            command = aliases[alpha_command]
 
-        render_items: list[ExtensionResultItem] = MenuBuilder.build_main_menu(
-            theme=theme, components=components
-        )
+        render_items: list[ExtensionResultItem]
+        query = Query(command, components)
+        if playback_state == MediaPlaybackState.NO_PLAYER:
+            render_items = MenuBuilder.build_volume_and_mute(theme, query)
+        else:
+            render_items = MenuBuilder.build_main_menu(theme=theme, query=query)
 
         search_terms: list[str] = command.lower().split()
         matched_search: list[ExtensionResultItem] = [

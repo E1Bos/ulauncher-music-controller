@@ -1,33 +1,18 @@
-from enum import Enum, auto
+from typing import TYPE_CHECKING, Any
 import logging
 import time
 from subprocess import CalledProcessError
 from ulauncher.api.client.EventListener import EventListener
 from ulauncher.api.shared.event import ItemEnterEvent
 from ulauncher.api.shared.action.RenderResultListAction import RenderResultListAction
-from audio_controller import AudioController
 
-from typing import TYPE_CHECKING, Any
+from audio_controller import AudioController
+from data_classes import Actions, Query, CurrentMedia, PlayerStatus
 
 if TYPE_CHECKING:
     from main import PlayerMain
 
 logger = logging.getLogger(__name__)
-
-
-class Actions(Enum):
-    """Actions that can be performed"""
-
-    PLAYPAUSE = auto()
-    NEXT = auto()
-    PREV = auto()
-    MUTE = auto()
-    SHUFFLE = auto()
-    REPEAT = auto()
-    SET_VOL = auto()
-    JUMP = auto()
-    PLAYER_SELECT_MENU = auto()
-    SELECT_PLAYER = auto()
 
 
 class InteractionListener(EventListener):
@@ -57,16 +42,25 @@ class InteractionListener(EventListener):
         extension.logger.debug(str(data))
 
         action: Actions = data["action"]
-        components: list[str] = data.get("components", [])
-        player_status = AudioController.get_player_status()
+        query: Query = data.get("query", Query("", []))
+        player_status: PlayerStatus = AudioController.get_player_status()
 
         start_time = time.time()
-        previous_media = AudioController.get_current_media()
+
+        previous_media: CurrentMedia | None
+        try:
+            previous_media = AudioController.get_current_media()
+        except CalledProcessError:
+            previous_media = None
 
         if action == Actions.PLAYPAUSE:
             AudioController.playpause()
         elif action in [Actions.NEXT, Actions.PREV]:
             try:
+                if previous_media is None:
+                    logger.error("Something has gone very wrong")
+                    raise ValueError("No previous media")
+
                 if action == Actions.NEXT:
                     AudioController.next()
                 else:
@@ -107,10 +101,11 @@ class InteractionListener(EventListener):
             AudioController.global_volume(0)
         elif action == Actions.SET_VOL:
             try:
-                if len(components) == 0:
-                    raise ValueError("No volume amount provided")
+                if len(query.components) == 0:
+                    vol_component = query.command
+                else:
+                    vol_component = query.components[0]
 
-                vol_component: str = components[0]
                 vol_amount_str: str = "".join(filter(str.isdigit, vol_component))
 
                 if not vol_amount_str:
@@ -120,7 +115,7 @@ class InteractionListener(EventListener):
                 AudioController.global_volume(vol_int)
             except (TypeError, ValueError) as e:
                 logger.error(
-                    f"Could not parse volume amount: {data['amount']}: {e.with_traceback(None)}"
+                    f"Could not parse query: {query}: {e.with_traceback(None)}"
                 )
         elif action == Actions.SHUFFLE:
             AudioController.shuffle()

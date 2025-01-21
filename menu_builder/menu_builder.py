@@ -3,14 +3,15 @@ from ulauncher.api.shared.item.ExtensionResultItem import ExtensionResultItem
 from ulauncher.api.shared.action.ExtensionCustomAction import ExtensionCustomAction
 from ulauncher.api.shared.action.HideWindowAction import HideWindowAction
 from ulauncher.api.shared.action.DoNothingAction import DoNothingAction
-from audio_controller import (
-    AudioController,
-    MediaPlaybackState,
+from audio_controller import AudioController
+from data_classes import (
     PlayerStatus,
+    MediaPlaybackState,
+    Actions,
     ShuffleState,
     RepeatState,
+    Query,
 )
-from event_listeners import Actions
 
 logger = logging.getLogger(__name__)
 
@@ -136,10 +137,39 @@ class MenuBuilder:
         )
 
     @staticmethod
+    def build_volume_and_mute(
+        theme: str, query: Query | None = None
+    ) -> list[ExtensionResultItem]:
+        icon_folder: str = f"{MenuBuilder.get_icon_folder(theme)}"
+        items: list[ExtensionResultItem] = []
+
+        items.append(
+            ExtensionResultItem(
+                icon=f"{icon_folder}/volume.svg",
+                name="Volume",
+                description="Set volume between 0-100",
+                on_enter=ExtensionCustomAction(
+                    {"action": Actions.SET_VOL, "query": query}
+                ),
+            )
+        )
+
+        items.append(
+            ExtensionResultItem(
+                icon=f"{icon_folder}/mute.svg",
+                name="Mute",
+                description="Mute global volume",
+                on_enter=ExtensionCustomAction({"action": Actions.MUTE}),
+            )
+        )
+
+        return items
+
+    @staticmethod
     def build_main_menu(
         theme: str,
         player_status: PlayerStatus | None = None,
-        components: list[str] | None = None,
+        query: Query | None = None,
     ) -> list[ExtensionResultItem]:
         """
         Build the main user interface, which contains the play/pause,
@@ -155,8 +185,8 @@ class MenuBuilder:
         """
         items: list[ExtensionResultItem] = []
         icon_folder: str = f"{MenuBuilder.get_icon_folder(theme)}"
-        if not components:
-            components = []
+        if not query:
+            query = Query("", [])
 
         player_status = (
             AudioController.get_player_status() if not player_status else player_status
@@ -168,25 +198,7 @@ class MenuBuilder:
 
         items.append(MenuBuilder.build_previous_track(theme))
 
-        items.append(
-            ExtensionResultItem(
-                icon=f"{icon_folder}/volume.svg",
-                name="Volume",
-                description="Set volume between '0-100'",
-                on_enter=ExtensionCustomAction(
-                    {"action": Actions.SET_VOL, "components": components}
-                ),
-            )
-        )
-
-        items.append(
-            ExtensionResultItem(
-                icon=f"{icon_folder}/mute.svg",
-                name="Mute",
-                description="Mute global volume",
-                on_enter=ExtensionCustomAction({"action": Actions.MUTE}),
-            )
-        )
+        items.extend(MenuBuilder.build_volume_and_mute(theme, query))
 
         shuffle_item: ExtensionResultItem | None = MenuBuilder.build_shuffle(
             theme, player_status
@@ -260,7 +272,7 @@ class MenuBuilder:
         )
 
     @staticmethod
-    def no_player_item(theme: str) -> ExtensionResultItem:
+    def no_player_item(theme: str) -> list[ExtensionResultItem]:
         """
         Build the no player item
 
@@ -271,12 +283,17 @@ class MenuBuilder:
             ExtensionResultItem: The no player item
         """
         icon_folder: str = f"{MenuBuilder.get_icon_folder(theme)}"
-        return ExtensionResultItem(
-            icon=f"{icon_folder}/icon.png",
-            name="No Media Playing",
-            description="Please start a music player",
-            on_enter=HideWindowAction(),
+        items: list[ExtensionResultItem] = []
+        items.append(
+            ExtensionResultItem(
+                icon=f"{icon_folder}/icon.png",
+                name="No Media Playing",
+                description="Please start a music player",
+                on_enter=HideWindowAction(),
+            )
         )
+        items.extend(MenuBuilder.build_volume_and_mute(theme))
+        return items
 
     @staticmethod
     def build_error(theme: str, title: str, message: str) -> ExtensionResultItem:

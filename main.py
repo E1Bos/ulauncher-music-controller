@@ -3,14 +3,10 @@ from ulauncher.api.shared.event import KeywordQueryEvent, ItemEnterEvent
 from ulauncher.api.shared.item.ExtensionResultItem import ExtensionResultItem
 from ulauncher.api.shared.action.DoNothingAction import DoNothingAction
 from ulauncher.api.shared.action.RenderResultListAction import RenderResultListAction
-from audio_controller import (
-    AudioController,
-    CurrentMedia,
-    PlayerStatus,
-    MediaPlaybackState,
-)
-from event_listeners import InteractionListener, KeywordListener, Actions
+from audio_controller import AudioController
+from event_listeners import InteractionListener, KeywordListener
 from menu_builder import MenuBuilder
+from data_classes import PlayerStatus, MediaPlaybackState, Actions, CurrentMedia
 from pathlib import Path
 import logging
 
@@ -53,12 +49,16 @@ class PlayerMain(Extension):
             [MenuBuilder.build_error(self.get_theme(), title, message)]
         )
 
-    def render_main_page(self, action: Actions | None = None) -> RenderResultListAction:
+    def render_main_page(
+        self, action: Actions | None = None, player_status: PlayerStatus | None = None
+    ) -> RenderResultListAction:
         logger.info(f"Current directory: {Path.cwd()}")
         theme: str = self.get_theme()
         items: list[ExtensionResultItem] = []
 
-        player_status: PlayerStatus = AudioController.get_player_status()
+        player_status = (
+            AudioController.get_player_status() if not player_status else player_status
+        )
 
         playback_state: MediaPlaybackState = player_status.playback_state
         logger.debug(f"Current status: {player_status}")
@@ -67,7 +67,7 @@ class PlayerMain(Extension):
             return RenderResultListAction([MenuBuilder.no_media_item(theme)])
 
         if playback_state == MediaPlaybackState.NO_PLAYER:
-            return RenderResultListAction([MenuBuilder.no_player_item(theme)])
+            return RenderResultListAction(MenuBuilder.no_player_item(theme))
 
         if action is Actions.NEXT:
             items.append(MenuBuilder.build_next_track(theme))
@@ -99,7 +99,9 @@ class PlayerMain(Extension):
         if action in self.__keep_open:
             return RenderResultListAction(items)
 
-        items.extend(MenuBuilder.build_main_menu(theme=theme, player_status=player_status))
+        items.extend(
+            MenuBuilder.build_main_menu(theme=theme, player_status=player_status)
+        )
 
         return RenderResultListAction(items)
 
