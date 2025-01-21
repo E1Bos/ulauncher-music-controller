@@ -147,7 +147,7 @@ class AudioController:
             PlayerStatus: The status of the player
         """
         player_status = AudioController.__run_command(
-            ["playerctl", "-p", "playerctld", "status"], False
+            ["playerctl", "status"], False
         )
         shuffle_status = AudioController.__run_command(
             ["playerctl", "-p", "playerctld", "shuffle"], False
