@@ -1,7 +1,9 @@
-<h1 align="center">
-  <img src="images/icon.png" width="25">,
-  The Media Controller for Ulauncher
+<h1 align="center" style="display: flex; align-items: center; justify-content: center;">
+  <img src="images/icon.png" width="50" style="margin-right: 10px;">
+  | Media Controller for Ulauncher
 </h1>
+
+
 
 <blockquote align="center">
     <h3>
@@ -34,6 +36,16 @@
 - 🔁 **Repeat Control**: Switch between repeat modes (off, playlist, track).
 - 🔊 **Volume Control**: Adjust the system volume directly.
 - 🎛️ **Multiple Media Players**: Manage multiple media players at once.
+
+### 🎵 Aliases
+Quickly control your audio with these aliases:
+- `p` - Play/Pause
+- `n` - Next Track
+- `b` - Previous Track
+- `v` - Volume
+- `m` - Mute
+- `r` - Change repeat (if supported)
+- `s` - Toggle shuffle (if supported)
 
 ## 🐧 Installing
 

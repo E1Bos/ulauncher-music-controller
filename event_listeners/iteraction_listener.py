@@ -56,7 +56,8 @@ class InteractionListener(EventListener):
         data: dict[str, Any] = event.get_data()
         extension.logger.debug(str(data))
 
-        action = data["action"]
+        action: Actions = data["action"]
+        components: list[str] = data.get("components", [])
         player_status = AudioController.get_player_status()
 
         start_time = time.time()
@@ -106,18 +107,17 @@ class InteractionListener(EventListener):
             AudioController.global_volume(0)
         elif action == Actions.SET_VOL:
             try:
-                query_split: list[str] = data["amount"].split()
-
-                if len(query_split) == 1:
+                if len(components) == 0:
                     raise ValueError("No volume amount provided")
 
-                amount_str: str = "".join(filter(str.isdigit, query_split[1]))
+                vol_component: str = components[0]
+                vol_amount_str: str = "".join(filter(str.isdigit, vol_component))
 
-                if not amount_str:
-                    raise ValueError(f"{query_split[1]} is not a number")
+                if not vol_amount_str:
+                    raise ValueError(f"{vol_component} is not a number")
 
-                amount: int = int(amount_str)
-                AudioController.global_volume(amount)
+                vol_int: int = int(vol_amount_str)
+                AudioController.global_volume(vol_int)
             except (TypeError, ValueError) as e:
                 logger.error(
                     f"Could not parse volume amount: {data['amount']}: {e.with_traceback(None)}"

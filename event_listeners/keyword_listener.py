@@ -30,16 +30,22 @@ class KeywordListener(EventListener):
             RenderResultListAction: A list of items to render
         """
         theme: str = extension.get_theme()
-        query: str = event.get_argument()
+        arguments: None | str = event.get_argument()
 
-        if query is None:
+        if arguments is None:
             return extension.render_main_page()
 
+        command, *components = arguments.split()
+        aliases = extension.get_aliases()
+
+        if command in aliases:
+            command = aliases[command]
+
         render_items: list[ExtensionResultItem] = MenuBuilder.build_main_menu(
-            theme, event
+            theme=theme, components=components
         )
 
-        search_terms: list[str] = query.lower().split()
+        search_terms: list[str] = command.lower().split()
         matched_search: list[ExtensionResultItem] = [
             item
             for item in render_items

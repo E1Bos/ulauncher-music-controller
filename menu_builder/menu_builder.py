@@ -3,7 +3,6 @@ from ulauncher.api.shared.item.ExtensionResultItem import ExtensionResultItem
 from ulauncher.api.shared.action.ExtensionCustomAction import ExtensionCustomAction
 from ulauncher.api.shared.action.HideWindowAction import HideWindowAction
 from ulauncher.api.shared.action.DoNothingAction import DoNothingAction
-from ulauncher.api.shared.event import KeywordQueryEvent
 from audio_controller import (
     AudioController,
     MediaPlaybackState,
@@ -139,8 +138,8 @@ class MenuBuilder:
     @staticmethod
     def build_main_menu(
         theme: str,
-        event: KeywordQueryEvent | None = None,
         player_status: PlayerStatus | None = None,
+        components: list[str] | None = None,
     ) -> list[ExtensionResultItem]:
         """
         Build the main user interface, which contains the play/pause,
@@ -148,13 +147,16 @@ class MenuBuilder:
 
         Args:
             theme (str): The current theme
-            event (KeywordQueryEvent | None): The event
+            player_status (PlayerStatus, optional): The current player status
+            components (list[str], optional): Command components
 
         Returns:
             list[ExtensionResultItem]: The main user interface
         """
         items: list[ExtensionResultItem] = []
         icon_folder: str = f"{MenuBuilder.get_icon_folder(theme)}"
+        if not components:
+            components = []
 
         player_status = (
             AudioController.get_player_status() if not player_status else player_status
@@ -166,14 +168,13 @@ class MenuBuilder:
 
         items.append(MenuBuilder.build_previous_track(theme))
 
-        amount: str = event.get_argument() if event else "50"
         items.append(
             ExtensionResultItem(
                 icon=f"{icon_folder}/volume.svg",
                 name="Volume",
                 description="Set volume between '0-100'",
                 on_enter=ExtensionCustomAction(
-                    {"action": Actions.SET_VOL, "amount": amount}
+                    {"action": Actions.SET_VOL, "components": components}
                 ),
             )
         )

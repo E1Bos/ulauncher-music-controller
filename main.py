@@ -18,12 +18,32 @@ logger = logging.getLogger(__name__)
 
 
 class PlayerMain(Extension):
-    keep_open: list[Actions] = [Actions.NEXT, Actions.PREV, Actions.REPEAT]
+    __keep_open: list[Actions] = [Actions.NEXT, Actions.PREV, Actions.REPEAT]
+    __aliases = {
+        "n": "next",
+        "b": "previous",
+        "m": "mute",
+        "v": "volume",
+        "r": "repeat",
+        "s": "shuffle",
+    }
 
     def __init__(self):
         super(PlayerMain, self).__init__()
         self.subscribe(KeywordQueryEvent, KeywordListener())
         self.subscribe(ItemEnterEvent, InteractionListener())
+
+    def get_aliases(self) -> dict[str, str]:
+        player_status = AudioController.get_player_status()
+        aliases = {
+            "p": "play"
+            if player_status.playback_state == MediaPlaybackState.PAUSED
+            else "pause",
+        }
+
+        aliases.update(self.__aliases)
+
+        return aliases
 
     def get_theme(self) -> str:
         return str(self.preferences["icon_theme"]).lower()
@@ -76,10 +96,10 @@ class PlayerMain(Extension):
             )
         )
 
-        if action in self.keep_open:
+        if action in self.__keep_open:
             return RenderResultListAction(items)
 
-        items.extend(MenuBuilder.build_main_menu(theme))
+        items.extend(MenuBuilder.build_main_menu(theme=theme, player_status=player_status))
 
         return RenderResultListAction(items)
 
